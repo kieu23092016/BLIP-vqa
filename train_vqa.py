@@ -7,7 +7,7 @@
 '''
 import argparse
 import os
-import ruamel_yaml as yaml
+import ruamel.yaml as yaml
 import numpy as np
 import random
 import time
@@ -95,12 +95,14 @@ def evaluation(model, data_loader, device, config) :
 
 
 def main(args, config):
-    utils.init_distributed_mode(args)    
+    args.distributed = False
+    # utils.init_distributed_mode(args)    
     
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
+    # seed = args.seed + utils.get_rank()
+    seed = 42
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
@@ -130,7 +132,8 @@ def main(args, config):
     
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[0])
+        # model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module    
     
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=config['init_lr'], weight_decay=config['weight_decay'])
@@ -167,7 +170,7 @@ def main(args, config):
             }
             torch.save(save_obj, os.path.join(args.output_dir, 'checkpoint_%02d.pth'%epoch))  
 
-        dist.barrier()         
+        # dist.barrier()         
 
     vqa_result = evaluation(model_without_ddp, test_loader, device, config)        
     result_file = save_result(vqa_result, args.result_dir, 'vqa_result')  
@@ -188,6 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')    
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', default=True, type=bool)
+    parser.add_argument('--gpu', default=0, type=bool)
     args = parser.parse_args()
 
     config = yaml.load(open(args.config, 'r'), Loader=yaml.Loader)
