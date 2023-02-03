@@ -36,7 +36,6 @@ class vqa_dataset(Dataset):
         # self.answer_list = []
         
     def __len__(self):
-        # return len(self.annotation)
         return len(self.annotation['annotations'])  
         # return 10  
     def __getitem__(self, index):    

@@ -47,7 +47,28 @@ class BLIP_VQA(nn.Module):
             '''
             n: number of answers for each question
             weights: weight for each answer
-            '''                     
+            '''     
+            # print(result.shape, result)
+            # print(torch.cat([caption.input_ids, image_embeds], dim=1).shape)
+            # print(torch.add(result, image_embeds).shape)
+            # print(F.pad(input=caption.input_ids, pad=(0, 1, 1, 1), mode='constant', value=0))
+            # print(pad_sequence([caption.input_ids, question.input_ids]).size())
+            # torch.cat((image_embeds, caption.input_ids), 0)
+            # print("caption",caption)
+            caption = self.tokenizer(caption, padding='longest', truncation=True, max_length=35, 
+                                  return_tensors="pt").to(image.device) 
+            caption_output = self.text_encoder(caption.input_ids,
+                                                attention_mask = caption.attention_mask, 
+                                                encoder_hidden_states = image_embeds,
+                                                encoder_attention_mask = image_atts,                             
+                                                return_dict = True)    
+            # expand_dim = 768 - caption.input_ids.size(dim=1)
+            padder = torch.zeros(3,901-caption_output.last_hidden_state.shape[1],768).to(image.device) 
+            # b = torch.zeros([3,901,expand_dim]).to(image.device) 
+            # result = torch.cat([caption.input_ids[:, None, :].repeat(1, 901, 1), b], dim=2)
+            result = torch.cat([caption_output.last_hidden_state, padder], dim=1)
+            image_embeds = torch.add(result, image_embeds)  
+            # print("image caption",image_embeds)       
             answer = self.tokenizer(answer, padding='longest', return_tensors="pt").to(image.device) 
             answer.input_ids[:,0] = self.tokenizer.bos_token_id
             answer_targets = answer.input_ids.masked_fill(answer.input_ids == self.tokenizer.pad_token_id, -100)      
@@ -57,7 +78,7 @@ class BLIP_VQA(nn.Module):
                                                 encoder_hidden_states = image_embeds,
                                                 encoder_attention_mask = image_atts,                             
                                                 return_dict = True)    
-
+            # print(question_output.last_hidden_state.shape)
             question_states = []                
             question_atts = []  
             for b, n in enumerate(n):
