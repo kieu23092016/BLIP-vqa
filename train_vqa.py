@@ -86,8 +86,7 @@ def evaluation(model, data_loader, device, config) :
                 result.append({"question_id":ques_id, "answer":answer})             
             
         elif config['inference']=='rank':    
-            answer_ids = model(image, question, answer_candidates, train=False, inference='rank', k_test=config['k_test'])      
-
+            answer_ids = model(image, question, None, answer_candidates, train=False, inference='rank', k_test=config['k_test'])      
             for ques_id, answer_id in zip(question_id, answer_ids):
                 result.append({"question_id":int(ques_id.item()), "answer":answer_list[answer_id]})   
 
